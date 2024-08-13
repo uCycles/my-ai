@@ -142,9 +142,9 @@ class Network:
 
 
         #create an empty gradient for weights and biases
-        self.weight_cost_gradient: list = [[0] * self.intermediate_layer_density for _ in range(self.intermediate_layer_count)] + [[0] * self.num_outputs]
-        self.bias_cost_gradient: list = [[0] * self.intermediate_layer_density for _ in range(self.intermediate_layer_count)] + [[0] * self.num_outputs]
-
+        self.weight_cost_gradient: list = [[0] * self.num_inputs for _ in range(self.num_inputs)] + [[0] * self.intermediate_layer_count for _ in range(self.intermediate_layer_count-1)] + [[0] * self.intermediate_layer_density for _ in range(self.num_outputs)]
+        self.bias_cost_gradient: list = [[[0] * self.intermediate_layer_density for _ in range(self.intermediate_layer_density)] for _ in range(self.intermediate_layer_count)] + [[[0] * self.num_outputs for _ in range(self.intermediate_layer_density)]]
+        
     def load(self, inputs, outputs) -> None:
         self.input_data: list = inputs
         self.output_data: list = outputs
@@ -167,10 +167,13 @@ class Network:
         else:
             raise("Incorrect amount of inputs")
 
-    def learn(self, learn_rate, batch_size, epochs) -> None:
+    def learn(self, learn_rate, batch_size) -> None:
         # IMPORTANT: the first weight in the neuron will always be associated with the first neuron in the previous layer
         # backpropigation starts at the output, hence the backwards loop
-        pass
+        for i in range(batch_size):
+            self.runBackpropigation()
+            self.applyGradient(learn_rate)
+            self.nPrint()
 
     def runBackpropigation(self):
         #since output is relu, getting the derivative should be either 1 or 0
@@ -192,7 +195,7 @@ class Network:
 
             #each list will represent one neurons previous partial derivatives
             self.previous_partial_derivatives.append([])
-            for j in range(neuron.getWeights()):
+            for j in range(len(neuron.getWeights())):
 
                 partial_derivative: float = 1 * (2*(neuron.getValue() - single_expected_output[i]))
                 self.previous_partial_derivatives[i].append(partial_derivative)
@@ -217,16 +220,15 @@ class Network:
                     weight_cost: float = next_neuron.getValue() * self.getNeuronCostHistory(self.previous_partial_derivatives, j, self.network[layer_index+1])
                     self.weight_cost_gradient[layer_index][j][k] = weight_cost
 
-    def applyGradient(self):
+    def applyGradient(self, learn_rate):
         working_layers: list = self.network[1:]
 
         for i, layer in enumerate(working_layers):
             for j, neuron in enumerate(layer):
                 for k, weight in enumerate(neuron.getWeights()):
 
-                    new_value: float = weight - self.weight_cost_gradient[i][j][k]
+                    new_value: float = weight - self.weight_cost_gradient[i][j][k] * learn_rate
                     neuron.setWeight(k, new_value)
-
 
     def getNeuronCostHistory(self, previous_derivatives, neuron_index, previous_layer):
         # made this cause of the "awful" structure
@@ -306,7 +308,7 @@ class Network:
 
 def main():
 
-    df = pd.read_csv('c:/Users/Grant Shimkaveg/Documents/vscodeProjects/my ai/student_data.csv')
+    df = pd.read_csv('c:/Users/Grant Shimkaveg/Documents/vscodeProjects/my-ai/Assets/student_data.csv')
 
     #inputs
     student_input_data: list = []
@@ -319,11 +321,14 @@ def main():
 
     #expected outputs
     student_output_data: list = df['GPA'].tolist()
+    student_output_data = [[i] for i in student_output_data]
 
     # example takes in the age and study time and returns possible gpa
-    myNetwork = Network(3,2,8,1)
+    myNetwork = Network(3,2,3,1)
+    myNetwork.nPrint()
     myNetwork.load(student_input_data, student_output_data)
-
+    myNetwork.learn(0.01,1)
+    
 
 
 
