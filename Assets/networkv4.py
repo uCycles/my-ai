@@ -186,8 +186,6 @@ class Network:
         # backpropigation starts at the output, hence the backwards loop
         for i in range(batch_size):
             self.runBackpropigation()
-            print("YOU FUCKING DID IT")
-            return
             self.applyGradient(learn_rate)
             self.nPrint()
 
@@ -248,9 +246,6 @@ class Network:
                     weight_cost: float = next_neuron.getValue() * previous_derivative
 
                     self.weight_cost_gradient[weight_cost_index][j][k] = weight_cost
-                    
-                    print(f"{self.weight_cost_gradient}     {weight_cost_index}, {j}, {k}")
-
 
                 temp_derivative_index += 1
                 
@@ -364,7 +359,10 @@ def main():
     # example takes in the age and study time and returns possible gpa
     myNetwork = Network(3,2,3,1)
     myNetwork.load(student_input_data, student_output_data)
-    myNetwork.learn(0.01,1)
+
+    for i in range(1000):
+        myNetwork.learn(0.00001,1)
+        myNetwork.nPrint()
     
 
 
