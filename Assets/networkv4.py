@@ -136,13 +136,27 @@ class Network:
             self.network.append(intermediate_layer)
 
         # create output layer
-        output_layer: list = [OutputNeuron(self.network[-2]) for _ in range(self.num_outputs)]
+
+        #IS IT MINUS 1 OR 2 VVVVVVVVVV
+
+        output_layer: list = [OutputNeuron(self.network[-1]) for _ in range(self.num_outputs)]
         self.network.append(output_layer)
 
 
 
         #create an empty gradient for weights and biases
-        self.weight_cost_gradient: list = [[0] * self.num_inputs for _ in range(self.num_inputs)] + [[0] * self.intermediate_layer_count for _ in range(self.intermediate_layer_count-1)] + [[0] * self.intermediate_layer_density for _ in range(self.num_outputs)]
+        self.weight_cost_gradient: list = []
+
+        for layer in range(1, len(self.network)):
+            layer_gradients = []
+            # Iterate over each neuron in the current layer
+            for neuron in self.network[layer]:
+                neuron_gradients = [0.0 for _ in range(len(neuron.getWeights()))]
+                layer_gradients.append(neuron_gradients)
+    
+            self.weight_cost_gradient.append(layer_gradients)
+        
+
         self.bias_cost_gradient: list = [[[0] * self.intermediate_layer_density for _ in range(self.intermediate_layer_density)] for _ in range(self.intermediate_layer_count)] + [[[0] * self.num_outputs for _ in range(self.intermediate_layer_density)]]
         
     def load(self, inputs, outputs) -> None:
@@ -172,6 +186,8 @@ class Network:
         # backpropigation starts at the output, hence the backwards loop
         for i in range(batch_size):
             self.runBackpropigation()
+            print("YOU FUCKING DID IT")
+            return
             self.applyGradient(learn_rate)
             self.nPrint()
 
@@ -208,17 +224,37 @@ class Network:
 
         # INTERMEDIATE WEIGHTS
         #each layer
+        
         for layer_index in range(len(self.network)-2,0,-1):
+            
+            temp_derivative_index: int = 0
+            weight_cost_index: int = layer_index-1
+            temp_partial_derivatives: list = []
+
             #each neuron
             for j, neuron in enumerate(self.network[layer_index]):
-                self.previous_partial_derivatives.append([])
+
+                temp_partial_derivatives.append([])
+
                 #each weight
                 for k, weight in enumerate(neuron.getWeights()):
-                    next_neuron = self.network[layer_index-1][k]
+
+                    next_neuron: object = self.network[layer_index-1][k]
 
                     # hell is real and its inside this method
-                    weight_cost: float = next_neuron.getValue() * self.getNeuronCostHistory(self.previous_partial_derivatives, j, self.network[layer_index+1])
-                    self.weight_cost_gradient[layer_index][j][k] = weight_cost
+                    previous_derivative: float = self.getNeuronCostHistory(self.previous_partial_derivatives, j, self.network[layer_index+1])
+                    temp_partial_derivatives[temp_derivative_index].append(previous_derivative)
+
+                    weight_cost: float = next_neuron.getValue() * previous_derivative
+
+                    self.weight_cost_gradient[weight_cost_index][j][k] = weight_cost
+                    
+                    print(f"{self.weight_cost_gradient}     {weight_cost_index}, {j}, {k}")
+
+
+                temp_derivative_index += 1
+                
+            self.previous_partial_derivatives = temp_partial_derivatives            
 
     def applyGradient(self, learn_rate):
         working_layers: list = self.network[1:]
@@ -236,10 +272,12 @@ class Network:
         previous_derivative_cost: list = []
         previous_weight_values: list = []
 
+        # get all weights connecting to neuron
         for neuron in previous_layer:
             for i, weight in enumerate(neuron.getWeights()):
                 if i == neuron_index:
                     previous_weight_values.append(weight)
+                    
 
         for item in previous_derivatives:
             for j, value in enumerate(item):    
@@ -325,7 +363,6 @@ def main():
 
     # example takes in the age and study time and returns possible gpa
     myNetwork = Network(3,2,3,1)
-    myNetwork.nPrint()
     myNetwork.load(student_input_data, student_output_data)
     myNetwork.learn(0.01,1)
     
